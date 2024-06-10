@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
@@ -47,28 +48,15 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val navController = rememberNavController()
+
             MainScreen(navController = navController)
         }
     }
 }
 
-@Composable
-fun NavGraph(navHostController: NavController) {
-    NavHost(navController = navHostController as NavHostController, startDestination = "login") {
-        composable("login") {
-            LoginScreen(navController = navHostController)
-        }
-        composable("screen_1") {
-            Screen1()
-        }
-        composable("screen_2") {
-            Screen2()
-        }
- }
-}
 
 @Composable
-fun LoginScreen(navController: NavController) {
+fun LoginScreen(onLoginClick: () -> Unit) {
     var login by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showError by remember { mutableStateOf(false) }
@@ -107,7 +95,7 @@ fun LoginScreen(navController: NavController) {
         Button(
             onClick = {
                 if (login == "user" && password == "password") {
-
+                    onLoginClick()
                 } else {
                     showError = true
                 }
@@ -118,9 +106,10 @@ fun LoginScreen(navController: NavController) {
         }
     }
 }
+
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun MainScreen(navController: NavController) {
+fun MainScreen(navController: NavHostController) {
     val isLoggedIn = remember { mutableStateOf(false) }
 
     if (isLoggedIn.value) {
@@ -129,44 +118,63 @@ fun MainScreen(navController: NavController) {
                 AppBottomNavigation(navController = navController)
             }
         ) {
-            NavGraph(navHostController = navController)
+            NavHost(navController = navController, startDestination = "login") {
+                composable("login") {
+                    LoginScreen {
+                        navController.navigate("screen_1")
+                    }
+                }
+                composable("screen_1") {
+                    Screen1(navController = navController)
+                }
+                composable("screen_2") {
+                    Screen2()
+                }
+            }
         }
     } else {
-        LoginScreen(navController = navController) { isLoggedIn.value = true }
+        LoginScreen(onLoginClick = {
+            isLoggedIn.value = true
+            navController.navigate("screen_1")
+        })
     }
 }
 
+
 @Composable
-fun AppBottomNavigation(navController: NavController ) {
+fun AppBottomNavigation(navController: NavController) {
     val listItems = listOf(
         BottomItem.Screen1,
         BottomItem.Screen2,
     )
-    NavigationBar(
-        Modifier.background(Color.White)
-    ) {
-        val backStackEntry by navController.currentBackStackEntryAsState()
-        val currenrRout = backStackEntry?.destination?.route
-        listItems.forEach { item ->
-            NavigationBarItem(
-                selected = currenrRout == item.route,
-                onClick = {
-                    navController.navigate(item.route)
-                },
-                icon = {
-                    Icon(painter = painterResource(id = item.iconId), contentDescription = "Icon")
-                },
-                label = {
-                    Text(text = item.title, fontSize = 15.sp)
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color.Red,
-                    unselectedIconColor = Color.Gray
+
+
+
+        NavigationBar(
+            Modifier.background(Color.White),
+        ) {
+            val backStackEntry by navController.currentBackStackEntryAsState()
+            val currentRoute = backStackEntry?.destination?.route
+            listItems.forEach { item ->
+                NavigationBarItem(
+                    selected = currentRoute == item.route,
+                    onClick = {
+                        navController.navigate(item.route)
+                    },
+                    icon = {
+                        Icon(painterResource(id = item.iconId), contentDescription = "Icon")
+                    },
+                    label = {
+                        Text(text = item.title, fontSize = 15.sp)
+                    },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color.Red,
+                        unselectedIconColor = Color.Gray
+                    )
                 )
-            )
+            }
         }
     }
-}
 
 sealed class BottomItem (val title:String, val iconId: Int, val route: String){
     object Screen1: BottomItem("Расписание", R.drawable.ras,"screen_1")
